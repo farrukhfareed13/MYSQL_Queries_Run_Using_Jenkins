@@ -1,0 +1,50 @@
+pipeline {
+    agent any
+    parameters { 
+	       choice(name: 'OEM', choices: [ 'Nokia', 'Samsung','MI','Vivo' ], description: 'Please Select OEM to run DB Query')
+			   string(name: 'Enter_DB_Query', defaultValue: ' ', description: 'Please enter your DB query')
+			   string(name: 'Enter_DB_Password', defaultValue: ' ', description: 'Please enter your DB Password', trim: true)
+                       }
+	     stages {
+         stage('Initial'){
+		        steps {
+			     echo "You have selected ${params.OEM} to run DB query"
+           echo "You have entered ${params.Enter_DB_Query} to run"
+                         }
+		                      }
+		  stage('Query Run'){
+			steps {
+				script{
+				     if (params.OEM == 'Nokia'){
+						 sh 'mysql -h DB_Server_IP -u jenkins -p$Enter_DB_Password -D nokia -e "$Enter_DB_Query;" '
+						                                                   }
+						 else if (params.OEM == 'Samsung'){
+						 sh 'mysql -h DB_Server_IP -u jenkins -p$Enter_DB_Password -D samsung -e "$Enter_DB_Query;" '                                                         
+																					 }
+						 else if (params.OEM == 'MI'){
+						 sh 'mysql -h DB_Server_IP -u jenkins -p$Enter_DB_Password -D mi -e "$Enter_DB_Query;" '
+                                                                                   }
+             else if (params.OEM == 'Vivo'){
+						 sh 'mysql -h DB_Server_IP -u jenkins -p$Enter_DB_Password -D vivo -e "$Enter_DB_Query;" '
+                                                                                   }
+																													   
+						 else {
+						    echo "Please Select Right OEM"        
+								  }
+					         }                                                 
+						 }
+		     	    }
+	        }
+	    post {
+        always {
+            // With the help of this segment you will recieve an Email with the status of build, which user run this query, what query is run with complete build log
+			echo 'Sending Email!'
+			wrap([$class: 'BuildUser']) {
+                emailext attachLog: true, body: "${currentBuild.currentResult} : Job ${env.JOB_NAME} build ${env.BUILD_NUMBER}\n More info at: ${env.BUILD_URL}\n DB Query Run : ${params.Enter_DB_Query}\n on ${params.OEM} \n By : ${BUILD_USER}",
+                recipientProviders: [[$class: 'DevelopersRecipientProvider'], [$class: 'RequesterRecipientProvider']],
+                subject: "Jenkins Build Trigger By ${BUILD_USER} Job ${env.JOB_NAME} : ${currentBuild.currentResult}",
+                to : 'farrukhfareed2009@gmail.com'
+            }
+        }
+    }
+        }
